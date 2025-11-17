@@ -31,6 +31,9 @@ describe('PlaylistsPage', () => {
 
         // Default mock: successful playlists fetch
         jest.spyOn(spotifyApi, 'fetchUserPlaylists').mockResolvedValue({ data: playlistsData, error: null });
+
+        // Ajout: mock pour fetchUserPlaylistsCount afin de renvoyer le total attendu par le composant
+        jest.spyOn(spotifyApi, 'fetchUserPlaylistsCount').mockResolvedValue({ data: { total: playlistsData.total }, error: null });
     });
 
     // Restore mocks after each test
@@ -81,8 +84,9 @@ describe('PlaylistsPage', () => {
         const heading = await screen.findByRole('heading', { level: 1, name: 'Your Playlists' });
         expect(heading).toBeInTheDocument();
 
-        // should render heading of level 2 showing total playlist count
-        const countHeading = await screen.findByRole('heading', { level: 2, name: `${limit} Playlists` });
+        // Mise à jour: le texte du second titre inclut maintenant le total (ex: "10 of 2 Playlists")
+        const expectedCountText = `${limit} of ${playlistsData.total} Playlists`; // commentaire: construit le texte attendu
+        const countHeading = await screen.findByRole('heading', { level: 2, name: expectedCountText });
         expect(countHeading).toBeInTheDocument();
 
         // verify each playlist item rendered, don't check details here as covered in PlaylistItem tests
@@ -150,8 +154,9 @@ describe('PlaylistsPage', () => {
         const heading1 = screen.getByRole('heading', { level: 1, name: `Your Playlists` });
         expect(heading1).toHaveClass('playlists-title', 'page-title');
 
-        // should have heading level 2 with appropriate class name
-        const heading2 = screen.getByRole('heading', { level: 2, name: `${limit} Playlists` });
+        // Mise à jour: vérifier le heading level 2 avec le texte "{limit} of {total} Playlists"
+        const expectedCountText = `${limit} of ${playlistsData.total} Playlists`; // commentaire: même construction que dans l'autre test
+        const heading2 = screen.getByRole('heading', { level: 2, name: expectedCountText });
         expect(heading2).toHaveClass('playlists-count');
 
         // should have ordered list with appropriate class name
