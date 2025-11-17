@@ -6,6 +6,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import PlaylistsPage, { limit } from './PlaylistsPage.jsx';
 import * as spotifyApi from '../../api/spotify-me.js';
+import * as tokenHandler from '../../utils/handleTokenError.js'; // <-- added import
 import { beforeEach, afterEach, jest } from '@jest/globals';
 import { KEY_ACCESS_TOKEN } from '../../constants/storageKeys.js';
 import { buildTitle } from '../../constants/appMeta.js';
@@ -162,5 +163,69 @@ describe('PlaylistsPage', () => {
         // should have ordered list with appropriate class name
         const list = screen.getByRole('list');
         expect(list).toHaveClass('playlists-list');
+    });
+
+    test('displays error when fetchUserPlaylistsCount returns error payload', async () => {
+        // Make handleTokenError return false so setError branch is taken
+        jest.spyOn(tokenHandler, 'handleTokenError').mockReturnValue(false);
+        // Mock count endpoint to return an error payload (res.error)
+        jest.spyOn(spotifyApi, 'fetchUserPlaylistsCount').mockResolvedValue({ error: 'Count failed' });
+
+        // Render the PlaylistsPage
+        renderPlaylistsPage();
+
+        // wait for loading to finish
+        await waitForLoadingToFinish();
+
+        // verify error message displayed (from count handler)
+        const alert = await screen.findByRole('alert');
+        expect(alert).toHaveTextContent('Count failed');
+    });
+
+    test('accepts top-level "total" shape from fetchUserPlaylistsCount', async () => {
+        // Mock count endpoint to return { total: <number> }
+        jest.spyOn(spotifyApi, 'fetchUserPlaylistsCount').mockResolvedValue({ total: playlistsData.total, error: null });
+
+        // Render the PlaylistsPage
+        renderPlaylistsPage();
+
+        // wait for loading to finish
+        await waitForLoadingToFinish();
+
+        // Verify the count heading uses the provided top-level total
+        const expectedCountText = `${limit} of ${playlistsData.total} Playlists`;
+        const countHeading = await screen.findByRole('heading', { level: 2, name: expectedCountText });
+        expect(countHeading).toBeInTheDocument();
+    });
+
+    test('accepts primitive numeric response from fetchUserPlaylistsCount', async () => {
+        // Mock count endpoint to return a primitive number (res is number)
+        jest.spyOn(spotifyApi, 'fetchUserPlaylistsCount').mockResolvedValue(playlistsData.total);
+
+        // Render the PlaylistsPage
+        renderPlaylistsPage();
+
+        // wait for loading to finish
+        await waitForLoadingToFinish();
+
+        // Verify the count heading uses the primitive number
+        const expectedCountText = `${limit} of ${playlistsData.total} Playlists`;
+        const countHeading = await screen.findByRole('heading', { level: 2, name: expectedCountText });
+        expect(countHeading).toBeInTheDocument();
+    });
+
+    test('displays error message when fetchUserPlaylistsCount rejects', async () => {
+        // Mock count endpoint to reject
+        jest.spyOn(spotifyApi, 'fetchUserPlaylistsCount').mockRejectedValue(new Error('Count network error'));
+
+        // Render the PlaylistsPage
+        renderPlaylistsPage();
+
+        // wait for loading to finish
+        await waitForLoadingToFinish();
+
+        // verify error message displayed (caught in .catch -> setError(err.message))
+        const alert = await screen.findByRole('alert');
+        expect(alert).toHaveTextContent('Count network error');
     });
 });
