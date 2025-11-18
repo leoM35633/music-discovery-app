@@ -7,6 +7,9 @@ import './TopArtistItem.css';
  * @param {number} param0.index - The index of the artist in the list
  * @returns {JSX.Element} The rendered component
  */
+
+
+
 export default function TopArtistItem({ artist, index }) {
   return (
     <li className="artist-item" data-testid={`top-artist-item-${artist.id}`}>
@@ -20,7 +23,8 @@ export default function TopArtistItem({ artist, index }) {
       <div className="artist-details">
         <div className="artist-details-header">
           <div className="artist-title">
-            {index}. {artist.name}
+            {/** On ajoute plus 1 à l'index, de telle sorte de commencer à 1 et non à 0 */}
+            {index+1}. {artist.name}
           </div>
           <div className="artist-genres">
             Genres: {artist.genres.join(', ')}
