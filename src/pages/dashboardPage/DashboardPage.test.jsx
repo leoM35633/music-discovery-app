@@ -198,10 +198,10 @@ describe('DashboardPage', () => {
         await waitForLoadingToFinish();
 
         // Aucune erreur affichée et aucun item de test présent
-        expect(screen.queryByTestId('error-artists-indicator')).toBeNull();
-        expect(screen.queryByTestId('error-tracks-indicator')).toBeNull();
-        expect(screen.queryByText(topArtistData.items[0].name)).toBeNull();
-        expect(screen.queryByText(topTrackData.items[0].name)).toBeNull();
+        expect(screen.queryByTestId('error-artists-indicator')).not.toBeInTheDocument();
+        expect(screen.queryByTestId('error-tracks-indicator')).not.toBeInTheDocument();
+        expect(screen.queryByText(topArtistData.items[0].name)).not.toBeInTheDocument();
+        expect(screen.queryByText(topTrackData.items[0].name)).not.toBeInTheDocument();
     });
 
     test('calls handleTokenError when token expired and redirects to login', async () => {
