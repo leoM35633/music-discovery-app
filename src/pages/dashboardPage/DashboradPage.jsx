@@ -39,6 +39,14 @@ export const limit = 1;
  */
 export const timeRange = 'short_term';
 
+// Helper to safely return the first image URL from an entity (handles missing arrays/objects/falsy urls)
+function getFirstImageUrl(entity, key = 'images') {
+	// entity?.[key] might be undefined, null, or not an array
+	const imgs = entity?.[key];
+	if (!Array.isArray(imgs) || imgs.length === 0) return null;
+	const url = imgs[0]?.url;
+	return url ? url : null;
+}
 
 export default function DashboardPage() {
   const navigate = useNavigate();
@@ -58,6 +66,9 @@ export default function DashboardPage() {
   const [topTrack, setTopTrack] = useState(null);
   const [tracksLoading, setTracksLoading] = useState(true);
   const [tracksError, setTracksError] = useState(null);
+
+  // stocker la liste complète des tracks (fallback d'affichage si besoin)
+  const [tracks, setTracks] = useState([]);
 
   // hook qui fournit le token (doit être utilisé à l'intérieur du composant)
   const { token } = useRequireToken();
@@ -112,6 +123,8 @@ export default function DashboardPage() {
           }
           return;
         }
+        // stocke la liste complète et le premier élément
+        setTracks(res?.data?.items ?? []);
         const firstTrack = res?.data?.items?.[0] ?? null;
         setTopTrack(firstTrack);
       } catch (err) {
@@ -124,6 +137,10 @@ export default function DashboardPage() {
 
   // topArtist est l'élément principal utilisé pour l'affichage
   const topArtist = artists?.[0] ?? null;
+
+  // derive image urls safely
+  const topArtistImageUrl = getFirstImageUrl(topArtist, 'images');
+  const topTrackImageUrl = getFirstImageUrl(topTrack?.album ?? null, 'images');
 
   return (
     <>
@@ -139,21 +156,31 @@ export default function DashboardPage() {
       {!loading && !artistsError && topArtist && (
         <div>
           <div>{topArtist.name}</div>
-          <div>
-            <img
-              src={topArtist.images?.[0]?.url}
-              alt={topArtist.name || 'Top artist'}
-              width="200"
-            />
-          </div>
+
+          {/* n'afficher l'image que si une URL est disponible */}
+          {topArtistImageUrl && (
+            <div>
+              <img
+                src={topArtistImageUrl}
+                alt={topArtist.name ?? 'Top artist'}
+                width="200"
+              />
+            </div>
+          )}
+
           {/* genres est un tableau : on le rend en chaîne séparée par des virgules */}
           <div>{(topArtist.genres || []).join(', ')}</div>
           <div>
-            <a href={topArtist.external_urls.spotify} target="_blank" rel="noopener noreferrer">
+            <a href={topArtist.external_urls?.spotify} target="_blank" rel="noopener noreferrer">
               <button type="button">Learn more</button>
             </a>
           </div>
         </div>
+      )}
+
+      {/* Fallback : si pour une raison topArtist absent mais artists présent, afficher le nom brut */}
+      {!loading && !artistsError && !topArtist && artists?.[0] && (
+        <div>{artists[0].name}</div>
       )}
 
       {/* Indicateurs de chargement et d'erreur pour les tracks */}
@@ -164,13 +191,18 @@ export default function DashboardPage() {
       {!tracksLoading && !tracksError && topTrack && (
         <div>
           <div>{topTrack.name}</div>
-          <div>
-            <img
-              src={topTrack.album?.images?.[0]?.url}
-              alt={topTrack.name || 'Top track'}
-              width="200"
-            />
-          </div>
+
+          {/* n'afficher l'image de l'album que si une URL est disponible */}
+          {topTrackImageUrl && (
+            <div>
+              <img
+                src={topTrackImageUrl}
+                alt={topTrack.name ?? 'Top track'}
+                width="200"
+              />
+            </div>
+          )}
+
           {/* artists est un tableau d'objets : on mappe sur .name puis on join */}
           <div>{(topTrack.artists || []).map(a => a.name).join(', ')}</div>
           <div>
@@ -180,6 +212,12 @@ export default function DashboardPage() {
           </div>
         </div>
       )}
+
+      {/* Fallback : si topTrack absent mais la liste tracks contient un élément, afficher son nom */}
+      {!tracksLoading && !tracksError && !topTrack && tracks?.[0] && (
+        <div>{tracks[0].name}</div>
+      )}
+
     </>
   );
 }
