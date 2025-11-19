@@ -6,7 +6,7 @@ import { buildTitle, APP_NAME } from '../../constants/appMeta.js';
 // hook pour exiger un token d'auth avant d'appeler l'API
 import { useRequireToken } from '../../hooks/useRequireToken.js';
 // fonction d'API pour récupérer les top artists de l'utilisateur
-import { fetchUserTopArtists } from '../../api/spotify-me.js';
+import { fetchUserTopArtists, fetchUserTopTracks} from '../../api/spotify-me.js';
 
 import './DashboardPage.css';
 import '../PageLayout.css';
@@ -29,9 +29,15 @@ export default function DashboardPage() {
   // état contenant la liste des artistes récupérés
   const [artists, setArtists] = useState([]);
 
-  // états de contrôle pour le chargement et les erreurs
+  // états de contrôle pour le chargement et les erreurs (artistes)
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  // état contenant la liste des tracks récupré
+  const [topTrack, setTopTrack] = useState(null);
+  // états de contrôle pour le chargement et les erreurs (top tracks)
+  const [tracksLoading, setTracksLoading] = useState(true);
+  const [tracksError, setTracksError] = useState(null);
 
   // hook qui fournit le token (doit être utilisé à l'intérieur du composant)
   const { token } = useRequireToken();
@@ -68,18 +74,36 @@ export default function DashboardPage() {
     }
   }, [topArtist]);
 
+  // Récupérer les top tracks et stocker le premier élément le plus écouté
+  useEffect(() => {
+    if (!token) return;
+    (async () => {
+      try {
+        setTracksLoading(true);
+        const res = await fetchUserTopTracks(token, limit, timeRange);
+        const firstTrack = res?.data?.items?.[0] ?? null;
+        setTopTrack(firstTrack);
+        // optionnel : log pour debug
+        console.log('topTrack (fetched):', firstTrack);
+      } catch (err) {
+        setTracksError(err?.message ?? 'Erreur lors de la récupération des top tracks');
+        console.error('Error fetching top tracks:', err);
+      } finally {
+        setTracksLoading(false);
+      }
+    })();
+  }, [token, navigate]);
+
   return (
     <>
       {/* Titre principal de la page */}
       <h1>Welcome to DashboardPage</h1>
 
-      {/* Indicateur de chargement */}
+      {/* Indicateur de chargement (artiste principal) */}
       {loading && <div>Loading top artist…</div>}
-
-      {/* Affiche l'erreur si elle existe */}
       {error && !loading && <div role="alert">{error}</div>}
 
-      {/* Affiche l'artiste le plus écouté : nom, image et genres (séparés par des virgules) */}
+      {/* Affiche l'artiste le plus écouté */}
       {!loading && !error && topArtist && (
         <div>
           <div>{topArtist.name}</div>
@@ -91,8 +115,6 @@ export default function DashboardPage() {
             />
           </div>
           <div>{(topArtist.genres || []).join(', ')}</div>
-
-          {/* Bouton pour en savoir plus : ouvre le lien externe dans un nouvel onglet */}
           <div>
             <a href={topArtist.external_urls.spotify} target="_blank" rel="noopener noreferrer">
               <button type="button">Learn more</button>
@@ -100,6 +122,36 @@ export default function DashboardPage() {
           </div>
         </div>
       )}
+
+      {/* --- Nouveau rendu minimal pour le top track (sans CSS) --- */}
+      {tracksLoading && <div>Loading top track…</div>}
+      {tracksError && !tracksLoading && <div role="alert">{tracksError}</div>}
+      {!tracksLoading && !tracksError && topTrack && (
+        <div>
+          {/* nom du morceau */}
+          <div>{topTrack.name}</div>
+
+          {/* image de l'album (album.images[0]) */}
+          <div>
+            <img
+              src={topTrack.album?.images?.[0]?.url}
+              alt={topTrack.name || 'Top track'}
+              width="200"
+            />
+          </div>
+
+          {/* artistes associés : concaténés en une seule chaîne séparée par des virgules */}
+          <div>{(topTrack.artists || []).map(a => a.name).join(', ')}</div>
+
+          {/* Bouton pour en savoir plus : ouvre le lien externe du morceau dans un nouvel onglet */}
+          <div>
+            <a href={topTrack.external_urls?.spotify} target="_blank" rel="noopener noreferrer">
+              <button type="button">Learn more</button>
+            </a>
+          </div>
+        </div>
+      )}
+      {/* --- fin rendu top track --- */}
     </>
   );
 }
