@@ -7,7 +7,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 // buildTitle permet de composer le titre du document (utilisé pour l'accessibilité et le SEO)
-import { buildTitle, APP_NAME } from '../../constants/appMeta.js';
+import { buildTitle } from '../../constants/appMeta.js';
 
 // hook pour exiger un token d'auth avant d'appeler l'API
 import { useRequireToken } from '../../hooks/useRequireToken.js';
