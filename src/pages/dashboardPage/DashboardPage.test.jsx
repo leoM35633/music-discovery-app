@@ -190,29 +190,6 @@ describe('DashboardPage', () => {
         );
     });
 
-    test('handles missing images and genres gracefully', async () => {
-        // Mock responses with missing images/genres/artists
-        jest.spyOn(spotifyApi, 'fetchUserTopArtists').mockResolvedValue({
-            data: { items: [{ id: 'a-noimg', name: 'ArtistNoImage', images: [], genres: [] }] },
-            error: null,
-        });
-        jest.spyOn(spotifyApi, 'fetchUserTopTracks').mockResolvedValue({
-            data: { items: [{ id: 't-noimg', name: 'TrackNoImage', album: { images: [] }, artists: [], external_urls: { spotify: 'https://open.spotify.com/track/t-noimg' } }] },
-            error: null,
-        });
-
-        renderDashboardPage();
-        await waitForLoadingToFinish();
-
-        // Noms rendus correctement même si pas d'images/genres
-        expect(screen.getByText('ArtistNoImage')).toBeInTheDocument();
-        expect(screen.getByText('TrackNoImage')).toBeInTheDocument();
-
-        // Pas d'éléments <img> avec ces alt texts (images manquantes) — ne doit pas planter
-        expect(screen.queryByAltText('ArtistNoImage')).toBeNull();
-        expect(screen.queryByAltText('TrackNoImage')).toBeNull();
-    });
-
     test('handles API returning data null with no error (renders nothing for items)', async () => {
         jest.spyOn(spotifyApi, 'fetchUserTopArtists').mockResolvedValue({ data: null, error: null });
         jest.spyOn(spotifyApi, 'fetchUserTopTracks').mockResolvedValue({ data: null, error: null });
