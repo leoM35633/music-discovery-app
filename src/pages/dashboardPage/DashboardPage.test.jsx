@@ -4,13 +4,15 @@ import { describe, expect, test } from '@jest/globals';
 import '@testing-library/jest-dom';
 import { render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
-import DashboardPage from './DashboardPage.jsx';
+import DashboardPage from './DashboradPage.jsx';
 import * as spotifyApi from '../../api/spotify-me.js';
 import { beforeEach, afterEach, jest } from '@jest/globals';
 import { KEY_ACCESS_TOKEN } from '../../constants/storageKeys.js';
 import { buildTitle } from '../../constants/appMeta.js';
+import * as handleTokenUtil from '../../utils/handleTokenError.js';
 
 // Mock top artist and track data
+// Ces objets imitent la forme renvoyée par l'API Spotify (res.data.items)
 const topArtistData = {
     items: [
         { 
@@ -23,6 +25,7 @@ const topArtistData = {
     ],
 };
 
+// topTrackData simule un objet track avec album, artistes et liens externes
 const topTrackData = {
     items: [
         { 
@@ -56,6 +59,7 @@ describe('DashboardPage', () => {
     });
 
     // Helper to render DashboardPage
+    // Utilise MemoryRouter pour pouvoir tester la redirection vers /login
     const renderDashboardPage = () => {
         return render(
             // render DashboardPage within MemoryRouter
@@ -70,6 +74,7 @@ describe('DashboardPage', () => {
     };
 
     // Helper to wait for loading to finish
+    // Vérifie d'abord que les indicateurs de chargement sont présents puis attend leur disparition
     const waitForLoadingToFinish = async () => {
         // initial loading state expectations
         expect(screen.queryByTestId('loading-tracks-indicator')).toHaveTextContent(/loading tracks/i);
@@ -166,5 +171,76 @@ describe('DashboardPage', () => {
 
         // Verify redirection to login page
         expect(screen.getByText('Login Page')).toBeInTheDocument();
+    });
+
+    // --- Nouveaux tests ajoutés pour augmenter la couverture ---
+
+    test('renders Learn more links with correct hrefs for artist and track', async () => {
+        renderDashboardPage();
+        await waitForLoadingToFinish();
+
+        // Récupère tous les liens 'Learn more' et vérifie que les hrefs attendus sont présents
+        const links = screen.getAllByRole('link');
+        const hrefs = links.map(l => l.href);
+        expect(hrefs).toEqual(
+            expect.arrayContaining([
+                topArtistData.items[0].external_urls.spotify,
+                topTrackData.items[0].external_urls.spotify,
+            ])
+        );
+    });
+
+    test('handles missing images and genres gracefully', async () => {
+        // Mock responses with missing images/genres/artists
+        jest.spyOn(spotifyApi, 'fetchUserTopArtists').mockResolvedValue({
+            data: { items: [{ id: 'a-noimg', name: 'ArtistNoImage', images: [], genres: [] }] },
+            error: null,
+        });
+        jest.spyOn(spotifyApi, 'fetchUserTopTracks').mockResolvedValue({
+            data: { items: [{ id: 't-noimg', name: 'TrackNoImage', album: { images: [] }, artists: [], external_urls: { spotify: 'https://open.spotify.com/track/t-noimg' } }] },
+            error: null,
+        });
+
+        renderDashboardPage();
+        await waitForLoadingToFinish();
+
+        // Noms rendus correctement même si pas d'images/genres
+        expect(screen.getByText('ArtistNoImage')).toBeInTheDocument();
+        expect(screen.getByText('TrackNoImage')).toBeInTheDocument();
+
+        // Pas d'éléments <img> avec ces alt texts (images manquantes) — ne doit pas planter
+        expect(screen.queryByAltText('ArtistNoImage')).toBeNull();
+        expect(screen.queryByAltText('TrackNoImage')).toBeNull();
+    });
+
+    test('handles API returning data null with no error (renders nothing for items)', async () => {
+        jest.spyOn(spotifyApi, 'fetchUserTopArtists').mockResolvedValue({ data: null, error: null });
+        jest.spyOn(spotifyApi, 'fetchUserTopTracks').mockResolvedValue({ data: null, error: null });
+
+        renderDashboardPage();
+        await waitForLoadingToFinish();
+
+        // Aucune erreur affichée et aucun item de test présent
+        expect(screen.queryByTestId('error-artists-indicator')).toBeNull();
+        expect(screen.queryByTestId('error-tracks-indicator')).toBeNull();
+        expect(screen.queryByText(topArtistData.items[0].name)).toBeNull();
+        expect(screen.queryByText(topTrackData.items[0].name)).toBeNull();
+    });
+
+    test('calls handleTokenError when token expired and redirects to login', async () => {
+        // For this test, ensure handleTokenError is spied to confirm it is invoked
+        const spyHandle = jest.spyOn(handleTokenUtil, 'handleTokenError');
+
+        jest.spyOn(spotifyApi, 'fetchUserTopArtists').mockResolvedValue({ data: null, error: 'The access token expired' });
+        jest.spyOn(spotifyApi, 'fetchUserTopTracks').mockResolvedValue({ data: null, error: 'The access token expired' });
+
+        renderDashboardPage();
+        await waitForLoadingToFinish();
+
+        expect(spyHandle).toHaveBeenCalled();
+        // Redirection vers la page de login (présence du contenu de la route /login)
+        expect(screen.getByText('Login Page')).toBeInTheDocument();
+
+        spyHandle.mockRestore();
     });
 });
