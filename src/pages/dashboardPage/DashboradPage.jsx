@@ -67,13 +67,6 @@ export default function DashboardPage() {
 
   const topArtist = artists?.[0] ?? null;
 
-  // Affiche topArtist dans la console à chaque mise à jour
-  useEffect(() => {
-    if (topArtist) {
-      console.log('topArtist:', topArtist);
-    }
-  }, [topArtist]);
-
   // Récupérer les top tracks et stocker le premier élément le plus écouté
   useEffect(() => {
     if (!token) return;
@@ -83,8 +76,6 @@ export default function DashboardPage() {
         const res = await fetchUserTopTracks(token, limit, timeRange);
         const firstTrack = res?.data?.items?.[0] ?? null;
         setTopTrack(firstTrack);
-        // optionnel : log pour debug
-        console.log('topTrack (fetched):', firstTrack);
       } catch (err) {
         setTracksError(err?.message ?? 'Erreur lors de la récupération des top tracks');
         console.error('Error fetching top tracks:', err);
