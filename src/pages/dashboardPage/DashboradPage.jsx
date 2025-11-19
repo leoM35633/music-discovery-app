@@ -16,6 +16,9 @@ import { fetchUserTopArtists, fetchUserTopTracks } from '../../api/spotify-me.js
 // utilitaire pour gérer les erreurs de token / redirection vers la page de login si token expiré
 import { handleTokenError } from '../../utils/handleTokenError.js';
 
+// compossant pour gérer le style d'afficher du top artiste et du top track
+import SimpleCard from '../../components/SimpleCard/SimpleCard.jsx'
+
 import './DashboardPage.css';
 import '../PageLayout.css';
 
@@ -154,33 +157,21 @@ export default function DashboardPage() {
 
       {/* Affichage de l'artiste le plus écouté (nom, image, genres) */}
       {!loading && !artistsError && topArtist && (
-        <div>
-          <div>{topArtist.name}</div>
-
-          {/* n'afficher l'image que si une URL est disponible */}
-          {topArtistImageUrl && (
-            <div>
-              <img
-                src={topArtistImageUrl}
-                alt={topArtist.name ?? 'Top artist'}
-                width="200"
-              />
-            </div>
-          )}
-
-          {/* genres est un tableau : on le rend en chaîne séparée par des virgules */}
-          <div>{(topArtist.genres || []).join(', ')}</div>
-          <div>
-            <a href={topArtist.external_urls?.spotify} target="_blank" rel="noopener noreferrer">
-              <button type="button">Learn more</button>
-            </a>
-          </div>
-        </div>
+        <SimpleCard
+          imageUrl={topArtistImageUrl}
+          title={topArtist.name}
+          subtitle={(topArtist.genres || []).join(', ')}
+          link={topArtist.external_urls?.spotify}
+        />
       )}
 
       {/* Fallback : si pour une raison topArtist absent mais artists présent, afficher le nom brut */}
       {!loading && !artistsError && !topArtist && artists?.[0] && (
-        <div>{artists[0].name}</div>
+        <SimpleCard
+          title={artists[0].name}
+          subtitle={(artists[0].genres || []).join(', ')}
+          link={artists[0].external_urls?.spotify}
+        />
       )}
 
       {/* Indicateurs de chargement et d'erreur pour les tracks */}
@@ -189,33 +180,21 @@ export default function DashboardPage() {
 
       {/* Affichage du top track (nom, image album, artistes) */}
       {!tracksLoading && !tracksError && topTrack && (
-        <div>
-          <div>{topTrack.name}</div>
-
-          {/* n'afficher l'image de l'album que si une URL est disponible */}
-          {topTrackImageUrl && (
-            <div>
-              <img
-                src={topTrackImageUrl}
-                alt={topTrack.name ?? 'Top track'}
-                width="200"
-              />
-            </div>
-          )}
-
-          {/* artists est un tableau d'objets : on mappe sur .name puis on join */}
-          <div>{(topTrack.artists || []).map(a => a.name).join(', ')}</div>
-          <div>
-            <a href={topTrack.external_urls?.spotify} target="_blank" rel="noopener noreferrer">
-              <button type="button">Learn more</button>
-            </a>
-          </div>
-        </div>
+        <SimpleCard
+          imageUrl={topTrackImageUrl}
+          title={topTrack.name}
+          subtitle={(topTrack.artists || []).map(a => a.name).join(', ')}
+          link={topTrack.external_urls?.spotify}
+        />
       )}
 
       {/* Fallback : si topTrack absent mais la liste tracks contient un élément, afficher son nom */}
       {!tracksLoading && !tracksError && !topTrack && tracks?.[0] && (
-        <div>{tracks[0].name}</div>
+        <SimpleCard
+          title={tracks[0].name}
+          subtitle={(tracks[0].artists || []).map(a => a.name).join(', ')}
+          link={tracks[0].external_urls?.spotify}
+        />
       )}
 
     </>
