@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-// buildTitle permet de composer le titre du document
+// buildTitle permet de composer le titre du document (utilisé pour l'accessibilité et le SEO)
 import { buildTitle, APP_NAME } from '../../constants/appMeta.js';
 
 // hook pour exiger un token d'auth avant d'appeler l'API
 import { useRequireToken } from '../../hooks/useRequireToken.js';
-// fonction d'API pour récupérer les top artists de l'utilisateur
-import { fetchUserTopArtists, fetchUserTopTracks} from '../../api/spotify-me.js';
+// fonctions d'API : récupérer top artists et top tracks de l'utilisateur connecté
+import { fetchUserTopArtists, fetchUserTopTracks } from '../../api/spotify-me.js';
+// utilitaire pour gérer les erreurs de token / redirection vers la page de login si token expiré
+import { handleTokenError } from '../../utils/handleTokenError.js';
 
 import './DashboardPage.css';
 import '../PageLayout.css';
@@ -14,11 +16,13 @@ import '../PageLayout.css';
 
 /**
  * Nombre d'artistes à récupérer pour la page Dashboard
+ * Ici on utilise 1 pour n'afficher que l'artiste le plus écouté.
  */
 export const limit = 1;
 
 /** 
- * Plage temporelle pour le calcul des top artists
+ * Plage temporelle pour le calcul des top artists / tracks
+ * 'short_term' correspond aux dernières ~4 semaines (selon l'API Spotify).
  */
 export const timeRange = 'short_term';
 
@@ -26,16 +30,19 @@ export const timeRange = 'short_term';
 export default function DashboardPage() {
   const navigate = useNavigate();
 
-  // état contenant la liste des artistes récupérés
+  // état contenant la liste des artistes récupérés (généralement 1 élément ici)
   const [artists, setArtists] = useState([]);
 
   // états de contrôle pour le chargement et les erreurs (artistes)
+  // loading: indicateur visuel pendant la récupération
+  // artistsError: message d'erreur à afficher si la requête échoue
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [artistsError, setArtistsError] = useState(null);
 
-  // état contenant la liste des tracks récupré
-  const [topTrack, setTopTrack] = useState(null);
   // états de contrôle pour le chargement et les erreurs (top tracks)
+  // topTrack: contient le premier élément de res.data.items pour les tracks
+  // tracksLoading et tracksError ont la même logique que pour les artistes
+  const [topTrack, setTopTrack] = useState(null);
   const [tracksLoading, setTracksLoading] = useState(true);
   const [tracksError, setTracksError] = useState(null);
 
@@ -43,59 +50,80 @@ export default function DashboardPage() {
   const { token } = useRequireToken();
 
   // Met à jour le titre du document pour la page Dashboard
+  // Important pour les tests et pour l'expérience utilisateur (onglet navigateur)
   useEffect(() => {
-    document.title = buildTitle('Top Artists');
+    document.title = buildTitle('Dashboard');
   }, []);
 
   // Effet : récupérer les top artists dès que le token est disponible
+  // - reset des erreurs avant chaque requête
+  // - vérifie res.error renvoyé par l'API et utilise handleTokenError pour
+  //   gérer les cas d'expiration du token (redirection vers /login)
   useEffect(() => {
     if (!token) return;
     (async () => {
       try {
         setLoading(true);
+        setArtistsError(null);
         const res = await fetchUserTopArtists(token, limit, timeRange);
-        // stocke les résultats dans l'état pour affichage
+        if (res?.error) {
+          // si handleTokenError retourne false => erreur non liée au token => on l'affiche
+          if (!handleTokenError(res.error, navigate)) {
+            setArtistsError(res.error);
+          }
+          return;
+        }
+        // stockage sûr des items (fallback sur tableau vide)
         setArtists(res?.data?.items ?? []);
       } catch (err) {
-        // stocke un message d'erreur lisible
-        setError(err?.message ?? 'Erreur lors de la récupération');
+        // capture d'une exception (réseau, JSON, etc.)
+        setArtistsError(err?.message ?? 'Erreur lors de la récupération des artistes');
       } finally {
         setLoading(false);
       }
     })();
   }, [token, navigate]);
 
-  const topArtist = artists?.[0] ?? null;
-
-  // Récupérer les top tracks et stocker le premier élément le plus écouté
+  // Effet : récupérer les top tracks (même logique que pour les artistes)
+  // - on stocke uniquement le premier élément (les plus écoutés)
   useEffect(() => {
     if (!token) return;
     (async () => {
       try {
         setTracksLoading(true);
+        setTracksError(null);
         const res = await fetchUserTopTracks(token, limit, timeRange);
+        if (res?.error) {
+          if (!handleTokenError(res.error, navigate)) {
+            setTracksError(res.error);
+          }
+          return;
+        }
         const firstTrack = res?.data?.items?.[0] ?? null;
         setTopTrack(firstTrack);
       } catch (err) {
         setTracksError(err?.message ?? 'Erreur lors de la récupération des top tracks');
-        console.error('Error fetching top tracks:', err);
       } finally {
         setTracksLoading(false);
       }
     })();
   }, [token, navigate]);
 
+  // topArtist est l'élément principal utilisé pour l'affichage
+  const topArtist = artists?.[0] ?? null;
+
   return (
     <>
-      {/* Titre principal de la page */}
-      <h1>Welcome to DashboardPage</h1>
+      {/* Titre principal de la page (doit correspondre aux tests) */}
+      <h1>Dashboard</h1>
+      <h2>Your top artist and track</h2>
 
-      {/* Indicateur de chargement (artiste principal) */}
-      {loading && <div>Loading top artist…</div>}
-      {error && !loading && <div role="alert">{error}</div>}
+      {/* Indicateurs de chargement et d'erreur pour les artistes */}
+      {loading && <div data-testid="loading-artists-indicator">Loading artists…</div>}
+      {artistsError && !loading && <div data-testid="error-artists-indicator" role="alert">{artistsError}</div>}
 
-      {/* Affiche l'artiste le plus écouté */}
-      {!loading && !error && topArtist && (
+      {/* Affichage de l'artiste le plus écouté (nom, image, genres) */}
+      {!loading && !artistsError && topArtist && (
         <div>
           <div>{topArtist.name}</div>
           <div>
@@ -105,6 +133,7 @@ export default function DashboardPage() {
               width="200"
             />
           </div>
+          {/* genres est un tableau : on le rend en chaîne séparée par des virgules */}
           <div>{(topArtist.genres || []).join(', ')}</div>
           <div>
             <a href={topArtist.external_urls.spotify} target="_blank" rel="noopener noreferrer">
@@ -114,15 +143,14 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* --- Nouveau rendu minimal pour le top track (sans CSS) --- */}
-      {tracksLoading && <div>Loading top track…</div>}
-      {tracksError && !tracksLoading && <div role="alert">{tracksError}</div>}
+      {/* Indicateurs de chargement et d'erreur pour les tracks */}
+      {tracksLoading && <div data-testid="loading-tracks-indicator">Loading tracks…</div>}
+      {tracksError && !tracksLoading && <div data-testid="error-tracks-indicator" role="alert">{tracksError}</div>}
+
+      {/* Affichage du top track (nom, image album, artistes) */}
       {!tracksLoading && !tracksError && topTrack && (
         <div>
-          {/* nom du morceau */}
           <div>{topTrack.name}</div>
-
-          {/* image de l'album (album.images[0]) */}
           <div>
             <img
               src={topTrack.album?.images?.[0]?.url}
@@ -130,11 +158,8 @@ export default function DashboardPage() {
               width="200"
             />
           </div>
-
-          {/* artistes associés : concaténés en une seule chaîne séparée par des virgules */}
+          {/* artists est un tableau d'objets : on mappe sur .name puis on join */}
           <div>{(topTrack.artists || []).map(a => a.name).join(', ')}</div>
-
-          {/* Bouton pour en savoir plus : ouvre le lien externe du morceau dans un nouvel onglet */}
           <div>
             <a href={topTrack.external_urls?.spotify} target="_blank" rel="noopener noreferrer">
               <button type="button">Learn more</button>
@@ -142,7 +167,6 @@ export default function DashboardPage() {
           </div>
         </div>
       )}
-      {/* --- fin rendu top track --- */}
     </>
   );
 }
