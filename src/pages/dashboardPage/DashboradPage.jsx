@@ -1,3 +1,9 @@
+// DashboardPage : récupère et affiche l'artiste et le morceau les plus écoutés de l'utilisateur.
+// - Utilise useRequireToken pour obtenir le token d'auth.
+// - Appelle fetchUserTopArtists et fetchUserTopTracks.
+// - Gère séparément les états de chargement / erreur pour artistes et tracks.
+// - Ne gère pas le style : rendu minimal (nom, image, genres/artists joinés).
+
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 // buildTitle permet de composer le titre du document (utilisé pour l'accessibilité et le SEO)
@@ -13,6 +19,13 @@ import { handleTokenError } from '../../utils/handleTokenError.js';
 import './DashboardPage.css';
 import '../PageLayout.css';
 
+/* 
+  Remarques sur l'implémentation :
+  - limit et timeRange définissent les paramètres passés aux appels API.
+  - Les useEffect déclenchent les fetchs lorsque le token est disponible.
+  - handleTokenError est utilisé pour détecter les erreurs d'auth (ex: token expiré)
+    et potentiellement rediriger l'utilisateur vers /login.
+*/
 
 /**
  * Nombre d'artistes à récupérer pour la page Dashboard
