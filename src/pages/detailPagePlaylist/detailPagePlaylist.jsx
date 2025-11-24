@@ -6,6 +6,7 @@ import { handleTokenError } from '../../utils/handleTokenError.js';
 import '../PageLayout.css';
 import { useNavigate, useParams } from 'react-router-dom';
 import TrackItem from '../../components/TrackItem/TrackItem.jsx';
+import './detailPagePlaylist.css'
 
 
 export default function PlaylistPage() {
@@ -50,32 +51,43 @@ export default function PlaylistPage() {
 
             {!loading && !error && playlist && (
                 <section className="playlist-details">
-                    <h2>{playlist.name}</h2>
-                    <p>{playlist.description || 'No description'}</p>
+                    {/* Apply new layout for playlist header only (image, title, description, spotify link) */}
+                    <div className="playlist-container">
+                        <div className="playlist-header" role="region" aria-label="Playlist header">
+                            <div className="playlist-header-image">
+                                {playlist.images?.[0]?.url ? (
+                                    <img
+                                        src={playlist.images[0].url}
+                                        alt={playlist.name ? `${playlist.name} cover` : 'Playlist cover'}
+                                        className="playlist-cover"
+                                    />
+                                ) : (
+                                    <div className="playlist-cover" aria-hidden="true">No image</div>
+                                )}
+                            </div>
 
-                    {/* image: Spotify returns images array */}
-                    {playlist.images?.[0]?.url ? (
-                        <img
-                            src={playlist.images[0].url}
-                            alt={playlist.name ? `${playlist.name} cover` : 'Playlist cover'}
-                            style={{ maxWidth: 320 }}
-                        />
-                    ) : (
-                        <div>No image</div>
-                    )}
+                            <div className="playlist-header-text-with-link">
+                                <div className="playlist-header-text">
+                                    <h2 className="playlist-title">{playlist.name}</h2>
+                                    <p className="playlist-subtitle">{playlist.description || 'No description'}</p>
+                                </div>
 
-                    {/* external link button */}
-                    {playlist.external_urls?.spotify ? (
-                        <a
-                            href={playlist.external_urls.spotify}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                        >
-                            <button type="button">Open in Spotify</button>
-                        </a>
-                    ) : null}
+                                {/* external link styled as button via CSS; keep target/rel for safety */}
+                                {playlist.external_urls?.spotify ? (
+                                    <a
+                                        href={playlist.external_urls.spotify}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="playlist-spotify-link"
+                                    >
+                                        Open in Spotify
+                                    </a>
+                                ) : null}
+                            </div>
+                        </div>
+                    </div>
 
-                    {/* Tracks list: map over playlist.tracks.items and pass item.track to TrackItem */}
+                    {/* Tracks list: unchanged behaviour / styling separate */}
                     {Array.isArray(playlist.tracks?.items) && playlist.tracks.items.length > 0 ? (
                         <>
                             <ol className="tracks-list">
