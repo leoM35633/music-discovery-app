@@ -44,7 +44,7 @@ export default function PlaylistPage() {
 
     return (
         <div className="playlist-page page-container">
-            <h1>Playlist Page</h1>
+            
 
             {loading && <div>Loading playlist…</div>}
             {error && !loading && <div role="alert">Erreur: {error}</div>}
