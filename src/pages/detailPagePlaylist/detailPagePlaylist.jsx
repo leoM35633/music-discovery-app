@@ -9,26 +9,71 @@ import { useNavigate, useParams } from 'react-router-dom';
 
 export default function PlaylistPage() {
     const { id } = useParams();
+    const navigate = useNavigate();
     // require token to fetch playlists
     const { token } = useRequireToken();
+    const [playlist, setPlaylist] = useState(null);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(null);
 
     useEffect(() => {
         if (!token || !id) return;
-
-        (async () => {
-            try {
-                const result = await fetchPlaylistById(token, id);
-                console.log('fetchPlaylistById result:', result);
-            } catch (err) {
+        setLoading(true);
+        fetchPlaylistById(token, id)
+            .then(res => {
+                console.log('fetchPlaylistById result:', res);
+                if (res.error) {
+                    if (!handleTokenError(res.error, navigate)) {
+                        setError(res.error);
+                    }
+                    setPlaylist(null);
+                    return;
+                }
+                setPlaylist(res.data);
+            })
+            .catch(err => {
                 console.error('Error fetching playlist:', err);
-            }
-        })();
+                setError(err.message || String(err));
+            })
+            .finally(() => setLoading(false));
     }, [token, id]);
 
     return (
-        <div>
-            Playlist Page
+        <div className="playlist-page page-container">
+            <h1>Playlist Page</h1>
             <div>ID dans l'URL: {id ?? 'aucun id'}</div>
+
+            {loading && <div>Loading playlist…</div>}
+            {error && !loading && <div role="alert">Erreur: {error}</div>}
+
+            {!loading && !error && playlist && (
+                <section className="playlist-details">
+                    <h2>{playlist.name}</h2>
+                    <p>{playlist.description || 'No description'}</p>
+
+                    {/* image: Spotify returns images array */}
+                    {playlist.images?.[0]?.url ? (
+                        <img
+                            src={playlist.images[0].url}
+                            alt={playlist.name ? `${playlist.name} cover` : 'Playlist cover'}
+                            style={{ maxWidth: 320 }}
+                        />
+                    ) : (
+                        <div>No image</div>
+                    )}
+
+                    {/* external link button */}
+                    {playlist.external_urls?.spotify ? (
+                        <a
+                            href={playlist.external_urls.spotify}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                        >
+                            <button type="button">Open in Spotify</button>
+                        </a>
+                    ) : null}
+                </section>
+            )}
         </div>
     );
 }
