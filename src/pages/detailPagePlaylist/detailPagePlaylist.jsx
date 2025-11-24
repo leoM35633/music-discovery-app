@@ -5,6 +5,7 @@ import { fetchPlaylistById } from '../../api/spotify-playlists.js';
 import { handleTokenError } from '../../utils/handleTokenError.js';
 import '../PageLayout.css';
 import { useNavigate, useParams } from 'react-router-dom';
+import TrackItem from '../../components/TrackItem/TrackItem.jsx';
 
 
 export default function PlaylistPage() {
@@ -72,6 +73,23 @@ export default function PlaylistPage() {
                             <button type="button">Open in Spotify</button>
                         </a>
                     ) : null}
+
+                    {/* Tracks list: map over playlist.tracks.items and pass item.track to TrackItem */}
+                    {Array.isArray(playlist.tracks?.items) && playlist.tracks.items.length > 0 ? (
+                        <>
+                            <h3>Tracks</h3>
+                            <ol className="tracks-list">
+                                {playlist.tracks.items.map((item, idx) => (
+                                    <TrackItem
+                                        key={item?.track?.id ?? idx}
+                                        track={item.track}
+                                    />
+                                ))}
+                            </ol>
+                        </>
+                    ) : (
+                        <div>No tracks available</div>
+                    )}
                 </section>
             )}
         </div>
