@@ -17,6 +17,9 @@ export default function PlaylistPage() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
 
+    // Set the document title for this page (Détail playlist)
+    useEffect(() => { document.title = buildTitle('Détail playlist'); }, []);
+
     useEffect(() => {
         if (!token || !id) return;
         setLoading(true);
