@@ -22,7 +22,6 @@ export default function PlaylistPage() {
         setLoading(true);
         fetchPlaylistById(token, id)
             .then(res => {
-                console.log('fetchPlaylistById result:', res);
                 if (res.error) {
                     if (!handleTokenError(res.error, navigate)) {
                         setError(res.error);
@@ -42,7 +41,6 @@ export default function PlaylistPage() {
     return (
         <div className="playlist-page page-container">
             <h1>Playlist Page</h1>
-            <div>ID dans l'URL: {id ?? 'aucun id'}</div>
 
             {loading && <div>Loading playlist…</div>}
             {error && !loading && <div role="alert">Erreur: {error}</div>}
