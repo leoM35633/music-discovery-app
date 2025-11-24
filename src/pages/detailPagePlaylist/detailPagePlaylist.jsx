@@ -78,7 +78,6 @@ export default function PlaylistPage() {
                     {/* Tracks list: map over playlist.tracks.items and pass item.track to TrackItem */}
                     {Array.isArray(playlist.tracks?.items) && playlist.tracks.items.length > 0 ? (
                         <>
-                            <h3>Tracks</h3>
                             <ol className="tracks-list">
                                 {playlist.tracks.items.map((item, idx) => (
                                     <TrackItem
