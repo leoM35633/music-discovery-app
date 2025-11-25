@@ -15,11 +15,12 @@ export default function PlaylistPage() {
     // require token to fetch playlists
     const { token } = useRequireToken();
     const [playlist, setPlaylist] = useState(null);
-    const [loading, setLoading] = useState(false);
+    // Changed: start with loading = true so a role="status" element is present on mount
+    const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
-    // Set the document title for this page (Détail playlist)
-    useEffect(() => { document.title = buildTitle('Détail playlist'); }, []);
+    // Set the document title for this page (use the title expected by tests)
+    useEffect(() => { document.title = buildTitle('Playlist'); }, []);
 
     useEffect(() => {
         if (!token || !id) return;
@@ -44,21 +45,19 @@ export default function PlaylistPage() {
 
     return (
         <div className="playlist-page page-container">
-            
-
-            {loading && <div>Loading playlist…</div>}
+            {loading && <div role="status" data-testid="loading-indicator">Loading playlist…</div>}
             {error && !loading && <div role="alert">Erreur: {error}</div>}
 
             {!loading && !error && playlist && (
                 <section className="playlist-details">
-                    {/* Apply new layout for playlist header only (image, title, description, spotify link) */}
-                    <div className="playlist-container">
-                        <div className="playlist-header" role="region" aria-label="Playlist header">
+                    {/* Playlist header: region must have aria-label equal to playlist name and proper classes */}
+                    <div className="playlist-container page-container" role="region" aria-label={playlist.name}>
+                        <div className="playlist-header">
                             <div className="playlist-header-image">
                                 {playlist.images?.[0]?.url ? (
                                     <img
                                         src={playlist.images[0].url}
-                                        alt={playlist.name ? `${playlist.name} cover` : 'Playlist cover'}
+                                        alt={`Cover of ${playlist.name}`}
                                         className="playlist-cover"
                                     />
                                 ) : (
@@ -68,8 +67,10 @@ export default function PlaylistPage() {
 
                             <div className="playlist-header-text-with-link">
                                 <div className="playlist-header-text">
-                                    <h2 className="playlist-title">{playlist.name}</h2>
-                                    <p className="playlist-subtitle">{playlist.description || 'No description'}</p>
+                                    {/* h1 with playlist name (tests expect level 1) */}
+                                    <h1 className="playlist-title page-title">{playlist.name}</h1>
+                                    {/* h2 with description (tests expect level 2) */}
+                                    <h2 className="playlist-subtitle page-subtitle">{playlist.description || 'No description'}</h2>
                                 </div>
 
                                 {/* external link styled as button via CSS; keep target/rel for safety */}
@@ -90,7 +91,7 @@ export default function PlaylistPage() {
                     {/* Tracks list: unchanged behaviour / styling separate */}
                     {Array.isArray(playlist.tracks?.items) && playlist.tracks.items.length > 0 ? (
                         <>
-                            <ol className="tracks-list">
+                            <ol className="playlist-list">
                                 {playlist.tracks.items.map((item, idx) => (
                                     <TrackItem
                                         key={item?.track?.id ?? idx}
