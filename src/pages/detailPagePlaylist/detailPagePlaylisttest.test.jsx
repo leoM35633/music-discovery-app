@@ -154,6 +154,24 @@ describe('PlaylistPage', () => {
         expect(errorMessage).toHaveTextContent('Network error');
     });
 
+    test('displays error when no access token is available and does not call fetch', async () => {
+        // Override localStorage mock to simulate missing token
+        jest.spyOn(window.localStorage.__proto__, 'getItem').mockImplementation(() => null);
+
+        // Render the PlaylistPage
+        renderPlaylistPage('playlist1');
+
+        // wait for loading to finish (component sets error immediately when no token)
+        await waitForLoadingToFinish();
+
+        // Verify fetch was not called
+        expect(spotifyApi.fetchPlaylistById).not.toHaveBeenCalled();
+
+        // Verify the appropriate error message is shown (component prefixes with "Erreur: ")
+        const errorMessage = await screen.findByRole('alert');
+        expect(errorMessage).toHaveTextContent(/No access token found/);
+    });
+
     test('redirects to login on token expiration', async () => {
         // Mock fetchPlaylistById to return token expired error
         jest.spyOn(spotifyApi, 'fetchPlaylistById').mockResolvedValue({ data: null, error: 'The access token expired' });
