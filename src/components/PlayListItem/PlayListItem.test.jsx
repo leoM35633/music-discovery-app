@@ -30,7 +30,13 @@ describe('PlayListItem component', () => {
         expect(screen.getByText(`By ${playlist.owner.display_name}`)).toBeInTheDocument();
         // track count is rendered correctly
         expect(screen.getByText(`${playlist.tracks.total} tracks`)).toBeInTheDocument();
-        // link is rendered correctly
-        expect(screen.getByRole('link')).toHaveAttribute('href', playlist.external_urls.spotify);
+
+        // Handle multiple links: external Spotify link + internal route link
+        const links = screen.getAllByRole('link');
+        expect(links.length).toBeGreaterThanOrEqual(2);
+        // at least one link points to the external Spotify URL
+        expect(links.some(l => l.getAttribute('href') === playlist.external_urls.spotify)).toBeTruthy();
+        // at least one link points to the internal playlist route (path may be relative)
+        expect(links.some(l => l.getAttribute('href')?.includes(`/playlist/${playlist.id}`))).toBeTruthy();
     });
 });
