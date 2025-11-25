@@ -96,6 +96,38 @@ export async function fetchUserPlaylists(token, limit = 10) {
   }
 }
 
+
+/**
+ * Fetch the total number of user's playlists from Spotify.
+ * Uses limit=1 to avoid transferring many items and reads the "total" field.
+ * @param {string} token - The Spotify access token.
+ * @returns {Promise<{ total: number, error: string|null }>} - The total count or an error message.
+ */
+export async function fetchUserPlaylistsCount(token) {
+  if (!token) {
+    return { error: 'No access token found.', total: 0 };
+  }
+
+  try {
+    // use limit=1 as documented to read only the "total" field
+    const res = await fetch(`${SPOTIFY_API_BASE}/me/playlists?limit=1`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const data = await res.json();
+
+    if (data.error) {
+      return { error: data.error.message, total: 0 };
+    }
+
+    const total = typeof data.total === 'number' ? data.total : (data.items ? data.items.length : 0);
+    return { total, error: null };
+  } catch {
+    return { error: 'Failed to fetch playlists count.', total: 0 };
+  }
+}
+
+
+
 /**
  * Fetch the user's top tracks from Spotify.
  * @param {string} token - The Spotify access token.
