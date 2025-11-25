@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { buildTitle } from '../../constants/appMeta.js';
 import { useRequireToken } from '../../hooks/useRequireToken.js';
 import { fetchPlaylistById } from '../../api/spotify-playlists.js';
@@ -7,6 +7,7 @@ import '../PageLayout.css';
 import { useNavigate, useParams } from 'react-router-dom';
 import TrackItem from '../../components/TrackItem/TrackItem.jsx';
 import './detailPagePlaylist.css'
+import { KEY_ACCESS_TOKEN } from '../../constants/storageKeys.js'; // added
 
 
 export default function PlaylistPage() {
@@ -14,6 +15,7 @@ export default function PlaylistPage() {
     const navigate = useNavigate();
     // require token to fetch playlists
     const { token } = useRequireToken();
+    const fetchedRef = useRef({ token: null, id: null }); // NEW: track last fetched pair
     const [playlist, setPlaylist] = useState(null);
     // Changed: start with loading = true so a role="status" element is present on mount
     const [loading, setLoading] = useState(true);
@@ -23,11 +25,33 @@ export default function PlaylistPage() {
     useEffect(() => { document.title = buildTitle('Playlist'); }, []);
 
     useEffect(() => {
-        if (!token || !id) return;
+        // If no playlist id, do nothing
+        if (!id) return;
+
+        // use token from hook if available, otherwise fallback to localStorage (tests mock localStorage)
+        const effectiveToken = token ?? window.localStorage.getItem(KEY_ACCESS_TOKEN);
+
+        // Handle missing token explicitly (show message + stop loader)
+        if (!effectiveToken) {
+            setLoading(false);
+            setError('No access token found.');
+            return;
+        }
+
+        // Prevent duplicate fetch: if we've already fetched this (token, id) pair, skip
+        if (fetchedRef.current.token === effectiveToken && fetchedRef.current.id === id) {
+            return;
+        }
+
+        // Mark this pair as fetched (prevents subsequent duplicate calls)
+        fetchedRef.current = { token: effectiveToken, id };
+
         setLoading(true);
-        fetchPlaylistById(token, id)
+        // use effectiveToken here so tests using localStorage token trigger the fetch
+        fetchPlaylistById(effectiveToken, id)
             .then(res => {
                 if (res.error) {
+                    // let handleTokenError perform navigation if needed; otherwise show error text
                     if (!handleTokenError(res.error, navigate)) {
                         setError(res.error);
                     }
@@ -38,7 +62,8 @@ export default function PlaylistPage() {
             })
             .catch(err => {
                 console.error('Error fetching playlist:', err);
-                setError(err.message || String(err));
+                // Provide a clear network error message
+                setError(err?.message ?? 'Network error');
             })
             .finally(() => setLoading(false));
     }, [token, id]);
