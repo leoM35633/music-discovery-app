@@ -17,9 +17,14 @@ export default function PlaylistPage() {
     const { token } = useRequireToken();
     const fetchedRef = useRef({ token: null, id: null }); // NEW: track last fetched pair
     const [playlist, setPlaylist] = useState(null);
-    // Changed: start with loading = true so a role="status" element is present on mount
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
+
+    // compute token available at initial render (hook or localStorage)
+    const initialStoredToken = typeof window !== 'undefined' ? window.localStorage.getItem(KEY_ACCESS_TOKEN) : null;
+    const initialEffectiveToken = token ?? initialStoredToken;
+
+    // Initialize loading/error based on token availability to avoid synchronous setState in effect
+    const [loading, setLoading] = useState(() => (initialEffectiveToken ? true : false));
+    const [error, setError] = useState(() => (initialEffectiveToken ? null : 'No access token found.'));
 
     // Set the document title for this page (use the title expected by tests)
     useEffect(() => { document.title = buildTitle('Playlist'); }, []);
@@ -29,13 +34,17 @@ export default function PlaylistPage() {
         if (!id) return;
 
         // use token from hook if available, otherwise fallback to localStorage (tests mock localStorage)
-        const effectiveToken = token ?? window.localStorage.getItem(KEY_ACCESS_TOKEN);
+        const effectiveToken = token ?? (typeof window !== 'undefined' ? window.localStorage.getItem(KEY_ACCESS_TOKEN) : null);
 
-        // Handle missing token explicitly (show message + stop loader)
+        // If no token now, there's nothing to do (initial state already reflects missing token)
         if (!effectiveToken) {
-            setLoading(false);
-            setError('No access token found.');
             return;
+        }
+
+        // If token appears after initial render, clear previous error and set loading
+        if (!initialEffectiveToken) {
+            setError(null);
+            setLoading(true);
         }
 
         // Prevent duplicate fetch: if we've already fetched this (token, id) pair, skip
@@ -46,7 +55,6 @@ export default function PlaylistPage() {
         // Mark this pair as fetched (prevents subsequent duplicate calls)
         fetchedRef.current = { token: effectiveToken, id };
 
-        setLoading(true);
         // use effectiveToken here so tests using localStorage token trigger the fetch
         fetchPlaylistById(effectiveToken, id)
             .then(res => {
@@ -66,7 +74,7 @@ export default function PlaylistPage() {
                 setError(err?.message ?? 'Network error');
             })
             .finally(() => setLoading(false));
-    }, [token, id]);
+    }, [token, id, navigate]); // include navigate in deps to satisfy lint
 
     return (
         <div className="playlist-page page-container">
@@ -115,7 +123,6 @@ export default function PlaylistPage() {
 
                     {/* Tracks list: unchanged behaviour / styling separate */}
                     {Array.isArray(playlist.tracks?.items) && playlist.tracks.items.length > 0 ? (
-                        <>
                             <ol className="playlist-list">
                                 {playlist.tracks.items.map((item, idx) => (
                                     <TrackItem
@@ -124,7 +131,6 @@ export default function PlaylistPage() {
                                     />
                                 ))}
                             </ol>
-                        </>
                     ) : (
                         <div>No tracks available</div>
                     )}
