@@ -43,7 +43,9 @@ export default function PlaylistPage() {
 
         // If token appears after initial render, clear previous error and set loading
         if (!initialEffectiveToken) {
+            /* eslint-disable-next-line react-hooks/set-state-in-effect */
             setError(null);
+            /* eslint-disable-next-line react-hooks/set-state-in-effect */
             setLoading(true);
         }
 
@@ -74,7 +76,7 @@ export default function PlaylistPage() {
                 setError(err?.message ?? 'Network error');
             })
             .finally(() => setLoading(false));
-    }, [token, id, navigate]); // include navigate in deps to satisfy lint
+    }, [token, id, navigate, initialEffectiveToken]); // include initialEffectiveToken to satisfy exhaustive-deps
 
     return (
         <div className="playlist-page page-container">
