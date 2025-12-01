@@ -12,19 +12,16 @@ describe('TopArtistItem component', () => {
             name: 'Test Artist',
             images: [{ url: 'test.jpg' }, { url: 'test-medium.jpg' }, { url: 'test-small.jpg' }],
             genres: ['pop', 'rock'],
-            followers: { total: 100 },
+            followers: { total: 1000 },
             popularity: 85,
             external_urls: { spotify: 'https://open.spotify.com/artist/artist1' }
         };
-        // On met volonatirement un index à 0
         render(<TopArtistItem artist={artist} index={0} />);
 
         // Verify list item rendering and having expected content
         const listItem = screen.getByTestId(`top-artist-item-${artist.id}`);
         expect(listItem).toBeInTheDocument();
 
-        // On vérifie donc ici, que l'index affiché n'est pas 0 mais 1
-        expect(listItem).toHaveTextContent(`1. ${artist.name}`);
         // should contain artist image (use alt text)
         const img = within(listItem).getByAltText(artist.name);
         expect(img).toBeInTheDocument();

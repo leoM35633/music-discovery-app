@@ -1,7 +1,7 @@
 // src/api/spotify.test.js
 import { afterEach, describe, expect, jest, test } from "@jest/globals";
 
-import { fetchAccountProfile, fetchUserPlaylists, fetchUserTopArtists, fetchUserTopTracks, fetchUserPlaylistsCount } from "./spotify-me";
+import { fetchAccountProfile, fetchUserPlaylists, fetchUserTopArtists, fetchUserTopTracks } from "./spotify-me";
 import { SPOTIFY_API_BASE } from "./spotify-commons";
 
 describe("spotify-me API", () => {
@@ -226,58 +226,6 @@ describe("spotify-me API", () => {
             error: "Failed to fetch top artists.",
             artists: [],
         });
-    });
-  });
-
-  describe("fetchUserPlaylistsCount", () => {
-    test("returns error if no token is provided", async () => {
-      const result = await fetchUserPlaylistsCount("");
-      expect(result).toEqual({
-        error: "No access token found.",
-        total: 0,
-      });
-    });
-
-    test("returns total on successful fetch", async () => {
-      const mockData = { total: 42 };
-      globalThis.fetch = jest.fn().mockResolvedValue({
-        json: jest.fn().mockResolvedValue(mockData),
-      });
-
-      const result = await fetchUserPlaylistsCount("valid_token");
-      expect(globalThis.fetch).toHaveBeenCalledWith(
-        `${SPOTIFY_API_BASE}/me/playlists?limit=1`,
-        {
-          headers: { Authorization: "Bearer valid_token" },
-        }
-      );
-      expect(result).toEqual({
-        total: 42,
-        error: null,
-      });
-    });
-
-    test("returns error if Spotify API returns error in response", async () => {
-      const mockError = { error: { message: "Invalid token" } };
-      globalThis.fetch = jest.fn().mockResolvedValue({
-        json: jest.fn().mockResolvedValue(mockError),
-      });
-
-      const result = await fetchUserPlaylistsCount("invalid_token");
-      expect(result).toEqual({
-        error: "Invalid token",
-        total: 0,
-      });
-    });
-
-    test("returns error if fetch throws", async () => {
-      globalThis.fetch = jest.fn().mockRejectedValue(new Error("Network error"));
-
-      const result = await fetchUserPlaylistsCount("any_token");
-      expect(result).toEqual({
-        error: "Failed to fetch playlists count.",
-        total: 0,
-      });
     });
   });
 });

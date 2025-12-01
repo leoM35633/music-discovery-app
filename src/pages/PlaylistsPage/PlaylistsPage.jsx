@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { buildTitle } from '../../constants/appMeta.js';
 import { useRequireToken } from '../../hooks/useRequireToken.js';
 import PlayListItem from '../../components/PlayListItem/PlayListItem.jsx';
-import { fetchUserPlaylists, fetchUserPlaylistsCount } from '../../api/spotify-me.js';
+import { fetchUserPlaylists } from '../../api/spotify-me.js';
 import { handleTokenError } from '../../utils/handleTokenError.js';
 import './PlaylistsPage.css';
 import '../PageLayout.css';
@@ -28,9 +28,6 @@ export default function PlaylistsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Ajout: état pour stocker le nombre total de playlists (fetchUserPlaylistsCount)
-  const [totalCount, setTotalCount] = useState(null); // Ajout: total de playlists récupéré depuis l'API
-
   // require token to fetch playlists
   const { token } = useRequireToken();
 
@@ -54,36 +51,10 @@ export default function PlaylistsPage() {
       .finally(() => { setLoading(false); });
   }, [token, navigate]);
 
-  // Ajout: nouvel effet pour récupérer le nombre total de playlists
-  useEffect(() => {
-    if (!token) return; // attendre le token
-    fetchUserPlaylistsCount(token)
-      .then(res => {
-        // Ajout: gestion d'erreur similaire à fetchUserPlaylists
-        if (res.error) {
-          if (!handleTokenError(res.error, navigate)) {
-            setError(res.error);
-          }
-          return;
-        }
-        // Ajout: récupérer le total depuis la réponse (selon shape de l'API)
-        // On essaie plusieurs clés possibles pour être tolérant
-        const total = res?.data?.total ?? res?.total ?? res;
-        setTotalCount(total);
-      })
-      .catch(err => { setError(err.message); });
-  }, [token, navigate]);
-
   return (
     <section className="playlists-container page-container" aria-labelledby="playlists-title">
       <h1 id="playlists-title" className="playlists-title page-title">Your Playlists</h1>
-
-      {/* Remplacement: afficher "{limit} of {totalCount} Playlists" */}
-      {/* Ajout: si totalCount non défini, afficher une indication (par ex. "…") */}
-      <h2 className="playlists-count">
-        {limit} of {totalCount ?? '…'} Playlists
-      </h2>
-
+      <h2 className="playlists-count">{limit} Playlists</h2>
       {loading && <output className="playlists-loading" data-testid="loading-indicator">Loading playlists…</output>}
       {error && !loading && <div className="playlists-error" role="alert">{error}</div>}
       {!loading && !error && (
